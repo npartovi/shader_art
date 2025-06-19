@@ -256,6 +256,70 @@ function loadPreset(preset) {
             colorIntensity: 1.8,
             rotationSpeed: 0.8,
             scaleFactor: 1.2
+        },
+        hypnotic: {
+            timeSpeed: 0.8,
+            distortion: 2.5,
+            complexity: 5,
+            colorIntensity: 2.5,
+            rotationSpeed: 1.5,
+            scaleFactor: 1.8
+        },
+        electric: {
+            timeSpeed: 3.0,
+            distortion: 5.0,
+            complexity: 7,
+            colorIntensity: 3.0,
+            rotationSpeed: -1.2,
+            scaleFactor: 0.6
+        },
+        dreamscape: {
+            timeSpeed: 0.2,
+            distortion: 1.0,
+            complexity: 4,
+            colorIntensity: 1.3,
+            rotationSpeed: 0.3,
+            scaleFactor: 2.5
+        },
+        cosmic: {
+            timeSpeed: 1.2,
+            distortion: 3.5,
+            complexity: 9,
+            colorIntensity: 1.8,
+            rotationSpeed: 0.7,
+            scaleFactor: 1.4
+        },
+        meditation: {
+            timeSpeed: 0.1,
+            distortion: 0.5,
+            complexity: 2,
+            colorIntensity: 0.8,
+            rotationSpeed: 0.1,
+            scaleFactor: 3.0
+        },
+        cyberpunk: {
+            timeSpeed: 2.5,
+            distortion: 4.5,
+            complexity: 6,
+            colorIntensity: 2.8,
+            rotationSpeed: -1.8,
+            scaleFactor: 0.9
+        },
+        aurora: {
+            timeSpeed: 0.6,
+            distortion: 2.2,
+            complexity: 4,
+            colorIntensity: 1.6,
+            rotationSpeed: 0.4,
+            scaleFactor: 2.2
+        },
+        tornado: {
+            timeSpeed: 2.8,
+            distortion: 4.8,
+            complexity: 8,
+            colorIntensity: 2.2,
+            rotationSpeed: 2.0,
+            scaleFactor: 1.1
         }
     };
     
