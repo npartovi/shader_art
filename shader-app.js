@@ -17,12 +17,21 @@ class ShaderApp {
             u_complexity: 3.0,
             u_colorIntensity: 1.0,
             u_rotationSpeed: 0.5,
-            u_scaleFactor: 1.0
+            u_scaleFactor: 1.0,
+            u_mouse: [0.5, 0.5],
+            u_clickEffect: 0.0,
+            u_hoverIntensity: 0.0
         };
+        
+        this.mousePos = { x: 0.5, y: 0.5 };
+        this.clickEffect = 0.0;
+        this.hoverIntensity = 0.0;
+        this.isMouseOver = false;
         
         this.initShaders();
         this.initBuffers();
         this.setupControls();
+        this.setupMouseEvents();
         this.render();
     }
     
@@ -45,6 +54,9 @@ class ShaderApp {
             uniform float u_colorIntensity;
             uniform float u_rotationSpeed;
             uniform float u_scaleFactor;
+            uniform vec2 u_mouse;
+            uniform float u_clickEffect;
+            uniform float u_hoverIntensity;
             
             vec2 rotate(vec2 v, float a) {
                 float s = sin(a);
@@ -91,26 +103,55 @@ class ShaderApp {
                 
                 float time = u_time * u_timeSpeed;
                 
+                // Mouse interactions
+                vec2 mouseUV = u_mouse * 2.0 - 1.0;
+                mouseUV.y *= -1.0; // Flip Y coordinate
+                float mouseDistance = length(uv - mouseUV);
+                
+                // Click effect creates expanding ripples
+                float clickRipple = sin(mouseDistance * 20.0 - u_clickEffect * 15.0) * 
+                                   exp(-u_clickEffect * 3.0) * 
+                                   exp(-mouseDistance * 2.0);
+                
+                // Hover effect warps space around mouse
+                vec2 mouseWarp = (uv - mouseUV) * u_hoverIntensity * 0.3 * 
+                                exp(-mouseDistance * 2.0);
+                uv += mouseWarp;
+                
                 for (float i = 0.0; i < 4.0; i++) {
                     uv = fract(uv * u_scaleFactor) - 0.5;
                     
-                    uv = rotate(uv, time * u_rotationSpeed + i * 0.5);
+                    // Add mouse-influenced rotation
+                    float mouseRotation = u_hoverIntensity * mouseDistance * 2.0;
+                    uv = rotate(uv, time * u_rotationSpeed + i * 0.5 + mouseRotation);
                     
                     float d = length(uv) * exp(-length(uv0));
                     
-                    vec3 col = palette(length(uv0) + i * 0.4 + time * 0.4);
+                    // Mouse affects color palette
+                    float colorShift = u_hoverIntensity * 0.5 + clickRipple * 0.3;
+                    vec3 col = palette(length(uv0) + i * 0.4 + time * 0.4 + colorShift);
                     
                     d = sin(d * 8.0 + time) / 8.0;
                     d = abs(d);
                     d = pow(0.01 / d, 1.2);
                     
-                    d *= sin(uv.x * u_complexity + time) * sin(uv.y * u_complexity + time);
+                    // Mouse affects complexity
+                    float mouseComplexity = u_complexity + u_hoverIntensity * 2.0;
+                    d *= sin(uv.x * mouseComplexity + time) * sin(uv.y * mouseComplexity + time);
                     d = abs(d);
                     
-                    d += sin(length(uv) * 10.0 * u_distortion + time * 2.0) * 0.1;
+                    // Mouse affects distortion
+                    float mouseDistortion = u_distortion + u_hoverIntensity * 1.5 + abs(clickRipple) * 2.0;
+                    d += sin(length(uv) * 10.0 * mouseDistortion + time * 2.0) * 0.1;
                     
-                    finalColor += col * d * u_colorIntensity;
+                    // Click effect amplifies brightness
+                    float brightness = u_colorIntensity * (1.0 + abs(clickRipple) * 0.8);
+                    finalColor += col * d * brightness;
                 }
+                
+                // Add subtle glow at mouse position
+                float mouseGlow = exp(-mouseDistance * 3.0) * u_hoverIntensity * 0.1;
+                finalColor += vec3(mouseGlow);
                 
                 gl_FragColor = vec4(finalColor, 1.0);
             }
@@ -192,8 +233,75 @@ class ShaderApp {
         });
     }
     
+    setupMouseEvents() {
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos.x = (e.clientX - rect.left) / rect.width;
+            this.mousePos.y = (e.clientY - rect.top) / rect.height;
+            this.uniforms.u_mouse = [this.mousePos.x, this.mousePos.y];
+        });
+        
+        this.canvas.addEventListener('mouseenter', () => {
+            this.isMouseOver = true;
+        });
+        
+        this.canvas.addEventListener('mouseleave', () => {
+            this.isMouseOver = false;
+        });
+        
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos.x = (e.clientX - rect.left) / rect.width;
+            this.mousePos.y = (e.clientY - rect.top) / rect.height;
+            this.uniforms.u_mouse = [this.mousePos.x, this.mousePos.y];
+            
+            // Trigger click effect
+            this.clickEffect = 1.0;
+        });
+        
+        // Add touch support for mobile
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            this.mousePos.x = (touch.clientX - rect.left) / rect.width;
+            this.mousePos.y = (touch.clientY - rect.top) / rect.height;
+            this.uniforms.u_mouse = [this.mousePos.x, this.mousePos.y];
+            this.clickEffect = 1.0;
+            this.isMouseOver = true;
+        });
+        
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            this.mousePos.x = (touch.clientX - rect.left) / rect.width;
+            this.mousePos.y = (touch.clientY - rect.top) / rect.height;
+            this.uniforms.u_mouse = [this.mousePos.x, this.mousePos.y];
+        });
+        
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.isMouseOver = false;
+        });
+    }
+    
     render() {
         this.uniforms.u_time = (Date.now() - this.startTime) / 1000.0;
+        
+        // Update hover intensity with smooth transition
+        const targetHover = this.isMouseOver ? 1.0 : 0.0;
+        this.hoverIntensity += (targetHover - this.hoverIntensity) * 0.05;
+        this.uniforms.u_hoverIntensity = this.hoverIntensity;
+        
+        // Update click effect (decay over time)
+        if (this.clickEffect > 0.0) {
+            this.uniforms.u_clickEffect = this.clickEffect;
+            this.clickEffect *= 0.95; // Decay factor
+            if (this.clickEffect < 0.01) {
+                this.clickEffect = 0.0;
+            }
+        }
         
         this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         this.gl.clearColor(0, 0, 0, 1);
