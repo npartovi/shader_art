@@ -105,20 +105,12 @@ class ShaderApp {
             }
             
             vec3 palette(float t) {
-                // Enhanced palette for smoother, more vibrant colors
                 vec3 a = vec3(0.5, 0.5, 0.5);
                 vec3 b = vec3(0.5, 0.5, 0.5);
-                vec3 c = vec3(2.0, 1.0, 0.0);
-                vec3 d = vec3(0.5, 0.2, 0.25);
+                vec3 c = vec3(1.0, 1.0, 1.0);
+                vec3 d = vec3(0.263, 0.416, 0.557);
                 
-                vec3 color = a + b * cos(6.28318 * (c * t + d));
-                
-                // Add smooth color flow variations
-                color.r += sin(t * 3.0) * 0.1;
-                color.g += cos(t * 2.0) * 0.1;
-                color.b += sin(t * 4.0) * 0.1;
-                
-                return clamp(color, 0.0, 1.0);
+                return a + b * cos(6.28318 * (c * t + d));
             }
             
             void main() {
