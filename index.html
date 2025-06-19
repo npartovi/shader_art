@@ -25,11 +25,13 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
         
         canvas {
             border: 2px solid #333;
             background: black;
+            cursor: crosshair;
         }
         
         .controls {
@@ -94,6 +96,9 @@
     <div class="container">
         <div class="canvas-container">
             <canvas id="canvas" width="800" height="600"></canvas>
+            <div id="interaction-hint" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: #666; font-size: 12px; text-align: center;">
+                Click and hover to morph the visuals
+            </div>
         </div>
         
         <div class="controls">
