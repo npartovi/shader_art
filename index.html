@@ -18,6 +18,8 @@
             display: flex;
             gap: 20px;
             height: 100vh;
+            padding: 0;
+            margin: 0;
         }
         
         .canvas-container {
@@ -26,20 +28,30 @@
             justify-content: center;
             align-items: center;
             position: relative;
+            margin: 20px 0 20px 20px;
+            min-height: 0;
         }
         
         canvas {
             border: 2px solid #333;
             background: black;
             cursor: crosshair;
+            width: 100%;
+            height: 100%;
+            max-width: calc(100vw - 380px);
+            max-height: calc(100vh - 40px);
+            object-fit: contain;
         }
         
         .controls {
-            width: 300px;
+            width: 320px;
+            min-width: 320px;
             background: #2a2a2a;
             padding: 20px;
             border-radius: 8px;
-            height: fit-content;
+            height: calc(100vh - 40px);
+            overflow-y: auto;
+            margin: 20px 20px 20px 0;
         }
         
         .control-group {
@@ -90,12 +102,44 @@
             border-bottom: 1px solid #444;
             padding-bottom: 10px;
         }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+            
+            .canvas-container {
+                margin: 10px;
+                height: 60vh;
+                min-height: 400px;
+            }
+            
+            canvas {
+                max-width: calc(100vw - 20px);
+                max-height: 60vh;
+            }
+            
+            .controls {
+                width: auto;
+                min-width: auto;
+                height: auto;
+                margin: 0 10px 10px 10px;
+                max-height: 40vh;
+                overflow-y: auto;
+            }
+            
+            .preset-buttons {
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="canvas-container">
-            <canvas id="canvas" width="800" height="600"></canvas>
+            <canvas id="canvas"></canvas>
             <div id="interaction-hint" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: #666; font-size: 12px; text-align: center;">
                 Click rapidly for combos • Hold down for sustained effects • Move mouse to warp reality
             </div>
