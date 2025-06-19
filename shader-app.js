@@ -20,13 +20,24 @@ class ShaderApp {
             u_scaleFactor: 1.0,
             u_mouse: [0.5, 0.5],
             u_clickEffect: 0.0,
-            u_hoverIntensity: 0.0
+            u_hoverIntensity: 0.0,
+            u_clickCombo: 0.0,
+            u_energyLevel: 0.0,
+            u_pulseIntensity: 0.0,
+            u_colorBoost: 0.0
         };
         
         this.mousePos = { x: 0.5, y: 0.5 };
         this.clickEffect = 0.0;
         this.hoverIntensity = 0.0;
         this.isMouseOver = false;
+        this.isMouseDown = false;
+        this.clickCombo = 0.0;
+        this.lastClickTime = 0;
+        this.energyLevel = 0.0;
+        this.pulseIntensity = 0.0;
+        this.colorBoost = 0.0;
+        this.clickCount = 0;
         
         this.initShaders();
         this.initBuffers();
@@ -57,6 +68,10 @@ class ShaderApp {
             uniform vec2 u_mouse;
             uniform float u_clickEffect;
             uniform float u_hoverIntensity;
+            uniform float u_clickCombo;
+            uniform float u_energyLevel;
+            uniform float u_pulseIntensity;
+            uniform float u_colorBoost;
             
             vec2 rotate(vec2 v, float a) {
                 float s = sin(a);
@@ -108,50 +123,101 @@ class ShaderApp {
                 mouseUV.y *= -1.0; // Flip Y coordinate
                 float mouseDistance = length(uv - mouseUV);
                 
-                // Click effect creates expanding ripples
-                float clickRipple = sin(mouseDistance * 20.0 - u_clickEffect * 15.0) * 
-                                   exp(-u_clickEffect * 3.0) * 
-                                   exp(-mouseDistance * 2.0);
+                // Enhanced click effect with combo multiplier
+                float comboMultiplier = 1.0 + u_clickCombo * 2.0;
+                float clickRipple = sin(mouseDistance * (20.0 + u_clickCombo * 10.0) - u_clickEffect * 15.0) * 
+                                   exp(-u_clickEffect * 2.0) * 
+                                   exp(-mouseDistance * (1.5 - u_clickCombo * 0.3)) * 
+                                   comboMultiplier;
                 
-                // Hover effect warps space around mouse
-                vec2 mouseWarp = (uv - mouseUV) * u_hoverIntensity * 0.3 * 
-                                exp(-mouseDistance * 2.0);
+                // Multiple ripple layers for more intensity
+                float clickRipple2 = sin(mouseDistance * 30.0 - u_clickEffect * 20.0 + 1.5) * 
+                                    exp(-u_clickEffect * 2.5) * 
+                                    exp(-mouseDistance * 1.8) * 
+                                    comboMultiplier * 0.7;
+                
+                float clickRipple3 = sin(mouseDistance * 40.0 - u_clickEffect * 25.0 + 3.0) * 
+                                    exp(-u_clickEffect * 3.0) * 
+                                    exp(-mouseDistance * 2.2) * 
+                                    comboMultiplier * 0.5;
+                
+                float totalRipple = clickRipple + clickRipple2 + clickRipple3;
+                
+                // Energy pulse that builds with interaction
+                float energyPulse = sin(time * 10.0 + u_energyLevel * 5.0) * u_energyLevel * 0.2;
+                
+                // Dynamic hover effect that intensifies with energy
+                float hoverIntensity = u_hoverIntensity * (1.0 + u_energyLevel);
+                vec2 mouseWarp = (uv - mouseUV) * hoverIntensity * (0.3 + u_pulseIntensity * 0.4) * 
+                                exp(-mouseDistance * (2.0 - u_energyLevel * 0.5));
                 uv += mouseWarp;
+                
+                // Add spiral distortion around mouse when energy is high
+                if (u_energyLevel > 0.3) {
+                    float angle = atan(uv.y - mouseUV.y, uv.x - mouseUV.x);
+                    float spiral = sin(angle * 8.0 + time * 5.0) * u_energyLevel * 0.1;
+                    uv += normalize(uv - mouseUV) * spiral * exp(-mouseDistance * 2.0);
+                }
                 
                 for (float i = 0.0; i < 4.0; i++) {
                     uv = fract(uv * u_scaleFactor) - 0.5;
                     
-                    // Add mouse-influenced rotation
-                    float mouseRotation = u_hoverIntensity * mouseDistance * 2.0;
-                    uv = rotate(uv, time * u_rotationSpeed + i * 0.5 + mouseRotation);
+                    // Enhanced mouse-influenced rotation with energy feedback
+                    float mouseRotation = hoverIntensity * mouseDistance * (2.0 + u_energyLevel * 3.0);
+                    float energyRotation = u_energyLevel * sin(time * 8.0) * 0.5;
+                    uv = rotate(uv, time * u_rotationSpeed + i * 0.5 + mouseRotation + energyRotation);
                     
                     float d = length(uv) * exp(-length(uv0));
                     
-                    // Mouse affects color palette
-                    float colorShift = u_hoverIntensity * 0.5 + clickRipple * 0.3;
+                    // Dynamic color shifting with combo effects
+                    float colorShift = hoverIntensity * 0.8 + abs(totalRipple) * 0.5 + 
+                                      u_energyLevel * sin(time * 15.0) * 0.3 + 
+                                      u_colorBoost * 2.0;
                     vec3 col = palette(length(uv0) + i * 0.4 + time * 0.4 + colorShift);
                     
-                    d = sin(d * 8.0 + time) / 8.0;
+                    // Add high-energy color explosions
+                    if (u_energyLevel > 0.5) {
+                        vec3 explosionColor = palette(time * 2.0 + mouseDistance * 5.0);
+                        col = mix(col, explosionColor, u_energyLevel * 0.4);
+                    }
+                    
+                    d = sin(d * (8.0 + u_pulseIntensity * 4.0) + time) / 8.0;
                     d = abs(d);
-                    d = pow(0.01 / d, 1.2);
+                    d = pow(0.01 / d, 1.2 + u_energyLevel * 0.3);
                     
-                    // Mouse affects complexity
-                    float mouseComplexity = u_complexity + u_hoverIntensity * 2.0;
-                    d *= sin(uv.x * mouseComplexity + time) * sin(uv.y * mouseComplexity + time);
+                    // Enhanced complexity with energy boost
+                    float mouseComplexity = u_complexity + hoverIntensity * 3.0 + u_energyLevel * 4.0;
+                    d *= sin(uv.x * mouseComplexity + time + energyPulse) * 
+                         sin(uv.y * mouseComplexity + time + energyPulse);
                     d = abs(d);
                     
-                    // Mouse affects distortion
-                    float mouseDistortion = u_distortion + u_hoverIntensity * 1.5 + abs(clickRipple) * 2.0;
-                    d += sin(length(uv) * 10.0 * mouseDistortion + time * 2.0) * 0.1;
+                    // Intensified distortion effects
+                    float mouseDistortion = u_distortion + hoverIntensity * 2.5 + 
+                                           abs(totalRipple) * 3.0 + u_energyLevel * 2.0;
+                    d += sin(length(uv) * 10.0 * mouseDistortion + time * 2.0 + energyPulse) * 
+                         (0.1 + u_pulseIntensity * 0.2);
                     
-                    // Click effect amplifies brightness
-                    float brightness = u_colorIntensity * (1.0 + abs(clickRipple) * 0.8);
+                    // Multi-layered brightness with combo effects
+                    float brightness = u_colorIntensity * 
+                                      (1.0 + abs(totalRipple) * 1.5 + 
+                                       u_energyLevel * 0.8 + 
+                                       u_pulseIntensity * 0.6);
                     finalColor += col * d * brightness;
                 }
                 
-                // Add subtle glow at mouse position
-                float mouseGlow = exp(-mouseDistance * 3.0) * u_hoverIntensity * 0.1;
-                finalColor += vec3(mouseGlow);
+                // Enhanced glow effects
+                float mouseGlow = exp(-mouseDistance * (3.0 - u_energyLevel)) * 
+                                 hoverIntensity * (0.15 + u_energyLevel * 0.2);
+                
+                // Energy aura that grows with interaction
+                float energyAura = exp(-mouseDistance * 1.5) * u_energyLevel * 0.3 * 
+                                  sin(time * 12.0);
+                
+                // Combo flash effect
+                float comboFlash = u_clickCombo * exp(-mouseDistance * 4.0) * 0.2;
+                
+                vec3 glowColor = palette(time + u_energyLevel * 3.0);
+                finalColor += glowColor * (mouseGlow + energyAura + comboFlash);
                 
                 gl_FragColor = vec4(finalColor, 1.0);
             }
@@ -249,17 +315,41 @@ class ShaderApp {
             this.isMouseOver = false;
         });
         
-        this.canvas.addEventListener('click', (e) => {
+        this.canvas.addEventListener('mousedown', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mousePos.x = (e.clientX - rect.left) / rect.width;
             this.mousePos.y = (e.clientY - rect.top) / rect.height;
             this.uniforms.u_mouse = [this.mousePos.x, this.mousePos.y];
+            this.isMouseDown = true;
             
-            // Trigger click effect
-            this.clickEffect = 1.0;
+            // Enhanced click mechanics with combo system
+            const currentTime = Date.now();
+            const timeSinceLastClick = currentTime - this.lastClickTime;
+            
+            if (timeSinceLastClick < 500) { // Combo window
+                this.clickCount++;
+                this.clickCombo = Math.min(this.clickCount * 0.3, 2.0);
+            } else {
+                this.clickCount = 1;
+                this.clickCombo = 0.3;
+            }
+            
+            this.lastClickTime = currentTime;
+            this.clickEffect = 1.0 + this.clickCombo;
+            this.energyLevel = Math.min(this.energyLevel + 0.2 + this.clickCombo * 0.1, 1.0);
+            this.colorBoost = 1.0;
         });
         
-        // Add touch support for mobile
+        this.canvas.addEventListener('mouseup', () => {
+            this.isMouseDown = false;
+        });
+        
+        this.canvas.addEventListener('click', (e) => {
+            // Additional click feedback for instant gratification
+            this.pulseIntensity = 1.0;
+        });
+        
+        // Enhanced touch support for mobile
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const rect = this.canvas.getBoundingClientRect();
@@ -267,8 +357,26 @@ class ShaderApp {
             this.mousePos.x = (touch.clientX - rect.left) / rect.width;
             this.mousePos.y = (touch.clientY - rect.top) / rect.height;
             this.uniforms.u_mouse = [this.mousePos.x, this.mousePos.y];
-            this.clickEffect = 1.0;
+            
+            // Apply same combo logic for touch
+            const currentTime = Date.now();
+            const timeSinceLastClick = currentTime - this.lastClickTime;
+            
+            if (timeSinceLastClick < 500) {
+                this.clickCount++;
+                this.clickCombo = Math.min(this.clickCount * 0.3, 2.0);
+            } else {
+                this.clickCount = 1;
+                this.clickCombo = 0.3;
+            }
+            
+            this.lastClickTime = currentTime;
+            this.clickEffect = 1.0 + this.clickCombo;
+            this.energyLevel = Math.min(this.energyLevel + 0.2 + this.clickCombo * 0.1, 1.0);
+            this.colorBoost = 1.0;
+            this.pulseIntensity = 1.0;
             this.isMouseOver = true;
+            this.isMouseDown = true;
         });
         
         this.canvas.addEventListener('touchmove', (e) => {
@@ -283,23 +391,64 @@ class ShaderApp {
         this.canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
             this.isMouseOver = false;
+            this.isMouseDown = false;
         });
     }
     
     render() {
         this.uniforms.u_time = (Date.now() - this.startTime) / 1000.0;
         
-        // Update hover intensity with smooth transition
-        const targetHover = this.isMouseOver ? 1.0 : 0.0;
-        this.hoverIntensity += (targetHover - this.hoverIntensity) * 0.05;
+        // Enhanced hover intensity with energy boost
+        const targetHover = this.isMouseOver ? (1.0 + this.energyLevel * 0.5) : 0.0;
+        this.hoverIntensity += (targetHover - this.hoverIntensity) * 0.08;
         this.uniforms.u_hoverIntensity = this.hoverIntensity;
         
-        // Update click effect (decay over time)
+        // Click effect with sustained intensity for mouse hold
         if (this.clickEffect > 0.0) {
             this.uniforms.u_clickEffect = this.clickEffect;
-            this.clickEffect *= 0.95; // Decay factor
+            
+            // Slower decay when mouse is held down for sustained effects
+            const decayRate = this.isMouseDown ? 0.98 : 0.93;
+            this.clickEffect *= decayRate;
+            
             if (this.clickEffect < 0.01) {
                 this.clickEffect = 0.0;
+            }
+        }
+        
+        // Energy level management - builds with interaction, slowly decays
+        if (this.isMouseOver || this.isMouseDown) {
+            this.energyLevel = Math.min(this.energyLevel + 0.01, 1.0);
+        } else {
+            this.energyLevel *= 0.995; // Very slow decay to keep users engaged
+        }
+        this.uniforms.u_energyLevel = this.energyLevel;
+        
+        // Combo system with decay
+        if (this.clickCombo > 0.0) {
+            this.uniforms.u_clickCombo = this.clickCombo;
+            this.clickCombo *= 0.997; // Very slow decay to maintain combo feeling
+            if (this.clickCombo < 0.05) {
+                this.clickCombo = 0.0;
+                this.clickCount = 0;
+            }
+        }
+        
+        // Pulse intensity for immediate feedback
+        if (this.pulseIntensity > 0.0) {
+            this.uniforms.u_pulseIntensity = this.pulseIntensity;
+            this.pulseIntensity *= 0.92; // Quick decay for punchy feedback
+            if (this.pulseIntensity < 0.01) {
+                this.pulseIntensity = 0.0;
+            }
+        }
+        
+        // Color boost for satisfying visual rewards
+        if (this.colorBoost > 0.0) {
+            this.uniforms.u_colorBoost = this.colorBoost;
+            this.colorBoost *= 0.96; // Medium decay
+            if (this.colorBoost < 0.01) {
+                this.colorBoost = 0.0;
             }
         }
         
