@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shader Art Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            height: 100vh;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            background: black;
+        }
+        
+        .controls {
+            width: 300px;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            height: fit-content;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .value-display {
+            font-size: 12px;
+            color: #888;
+            text-align: right;
+        }
+        
+        button {
+            background: #4a4a4a;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #5a5a5a;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        h3 {
+            margin-top: 0;
+            color: #fff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="canvas-container">
+            <canvas id="canvas" width="800" height="600"></canvas>
+        </div>
+        
+        <div class="controls">
+            <h3>Shader Controls</h3>
+            
+            <div class="control-group">
+                <label>Time Speed</label>
+                <input type="range" id="timeSpeed" min="0" max="3" step="0.1" value="1">
+                <div class="value-display" id="timeSpeedValue">1.0</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Distortion Amount</label>
+                <input type="range" id="distortion" min="0" max="5" step="0.1" value="1">
+                <div class="value-display" id="distortionValue">1.0</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Shape Complexity</label>
+                <input type="range" id="complexity" min="1" max="10" step="1" value="3">
+                <div class="value-display" id="complexityValue">3</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Color Intensity</label>
+                <input type="range" id="colorIntensity" min="0.1" max="3" step="0.1" value="1">
+                <div class="value-display" id="colorIntensityValue">1.0</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Rotation Speed</label>
+                <input type="range" id="rotationSpeed" min="-2" max="2" step="0.1" value="0.5">
+                <div class="value-display" id="rotationSpeedValue">0.5</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Scale Factor</label>
+                <input type="range" id="scaleFactor" min="0.1" max="3" step="0.1" value="1">
+                <div class="value-display" id="scaleFactorValue">1.0</div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button onclick="loadPreset('kaleidoscope')">Kaleidoscope</button>
+                    <button onclick="loadPreset('plasma')">Plasma</button>
+                    <button onclick="loadPreset('fractal')">Fractal</button>
+                    <button onclick="loadPreset('waves')">Waves</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <button onclick="resetControls()">Reset All</button>
+                <button onclick="randomize()">Randomize</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="shader-app.js"></script>
+</body>
+</html>
