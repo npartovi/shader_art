@@ -8,12 +8,10 @@ class ShaderApp {
             return;
         }
         
-        this.resizeCanvas();
-        
         this.startTime = Date.now();
         this.uniforms = {
             u_time: 0,
-            u_resolution: [this.canvas.width, this.canvas.height],
+            u_resolution: [800, 600], // Initial resolution
             u_timeSpeed: 1.0,
             u_distortion: 1.0,
             u_complexity: 3.0,
@@ -46,6 +44,7 @@ class ShaderApp {
         this.setupControls();
         this.setupMouseEvents();
         this.setupResize();
+        this.resizeCanvas(); // Resize after shaders are initialized
         this.render();
     }
     
@@ -229,12 +228,25 @@ class ShaderApp {
         const vertexShader = this.createShader(this.gl.VERTEX_SHADER, vertexShaderSource);
         const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, fragmentShaderSource);
         
+        if (!vertexShader || !fragmentShader) {
+            console.error('Failed to create shaders');
+            return;
+        }
+        
         this.program = this.createProgram(vertexShader, fragmentShader);
+        if (!this.program) {
+            console.error('Failed to create shader program');
+            return;
+        }
+        
         this.gl.useProgram(this.program);
         
         this.uniformLocations = {};
         Object.keys(this.uniforms).forEach(key => {
             this.uniformLocations[key] = this.gl.getUniformLocation(this.program, key);
+            if (this.uniformLocations[key] === null) {
+                console.warn(`Uniform ${key} not found in shader`);
+            }
         });
         
         this.positionAttributeLocation = this.gl.getAttribLocation(this.program, 'a_position');
@@ -399,7 +411,17 @@ class ShaderApp {
     }
     
     resizeCanvas() {
+        if (!this.canvas || !this.uniforms) {
+            console.warn('Canvas or uniforms not initialized yet');
+            return;
+        }
+        
         const container = this.canvas.parentElement;
+        if (!container) {
+            console.warn('Canvas container not found');
+            return;
+        }
+        
         const rect = container.getBoundingClientRect();
         
         // Detect mobile layout
@@ -446,8 +468,10 @@ class ShaderApp {
         this.canvas.style.width = width + 'px';
         this.canvas.style.height = height + 'px';
         
-        // Update uniforms
-        this.uniforms.u_resolution = [this.canvas.width, this.canvas.height];
+        // Update uniforms safely
+        if (this.uniforms && this.uniforms.u_resolution) {
+            this.uniforms.u_resolution = [this.canvas.width, this.canvas.height];
+        }
         
         // Update WebGL viewport
         if (this.gl) {
@@ -528,10 +552,12 @@ class ShaderApp {
             const location = this.uniformLocations[key];
             const value = this.uniforms[key];
             
-            if (Array.isArray(value)) {
-                this.gl.uniform2fv(location, value);
-            } else {
-                this.gl.uniform1f(location, value);
+            if (location !== null && location !== undefined) {
+                if (Array.isArray(value)) {
+                    this.gl.uniform2fv(location, value);
+                } else {
+                    this.gl.uniform1f(location, value);
+                }
             }
         });
         
