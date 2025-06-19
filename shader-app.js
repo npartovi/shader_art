@@ -8,6 +8,8 @@ class ShaderApp {
             return;
         }
         
+        this.resizeCanvas();
+        
         this.startTime = Date.now();
         this.uniforms = {
             u_time: 0,
@@ -43,6 +45,7 @@ class ShaderApp {
         this.initBuffers();
         this.setupControls();
         this.setupMouseEvents();
+        this.setupResize();
         this.render();
     }
     
@@ -392,6 +395,69 @@ class ShaderApp {
             e.preventDefault();
             this.isMouseOver = false;
             this.isMouseDown = false;
+        });
+    }
+    
+    resizeCanvas() {
+        const container = this.canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+        
+        // Detect mobile layout
+        const isMobile = window.innerWidth <= 768;
+        
+        let maxWidth, maxHeight;
+        
+        if (isMobile) {
+            // Mobile: canvas takes 60% of viewport height
+            maxWidth = window.innerWidth - 20; // Account for margins
+            maxHeight = window.innerHeight * 0.6; // 60vh
+        } else {
+            // Desktop: account for controls panel
+            maxWidth = window.innerWidth - 380; // Account for controls panel
+            maxHeight = window.innerHeight - 40; // Account for margins
+        }
+        
+        // Use container dimensions if available
+        if (rect.width > 0 && rect.height > 0) {
+            maxWidth = Math.min(maxWidth, rect.width - 4); // Account for border
+            maxHeight = Math.min(maxHeight, rect.height - 4);
+        }
+        
+        // Maintain aspect ratio while maximizing size
+        const aspectRatio = 16/10; // Slightly wider aspect ratio for better visuals
+        let width = maxWidth;
+        let height = width / aspectRatio;
+        
+        if (height > maxHeight) {
+            height = maxHeight;
+            width = height * aspectRatio;
+        }
+        
+        // Ensure minimum size for usability
+        width = Math.max(width, 400);
+        height = Math.max(height, 300);
+        
+        // Set canvas resolution (use device pixel ratio for crisp rendering)
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = Math.floor(width * dpr);
+        this.canvas.height = Math.floor(height * dpr);
+        
+        // Set display size
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        
+        // Update uniforms
+        this.uniforms.u_resolution = [this.canvas.width, this.canvas.height];
+        
+        // Update WebGL viewport
+        if (this.gl) {
+            this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        }
+    }
+    
+    setupResize() {
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
         });
     }
     
