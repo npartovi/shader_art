@@ -105,12 +105,20 @@ class ShaderApp {
             }
             
             vec3 palette(float t) {
+                // Enhanced palette for smoother, more vibrant colors
                 vec3 a = vec3(0.5, 0.5, 0.5);
                 vec3 b = vec3(0.5, 0.5, 0.5);
-                vec3 c = vec3(1.0, 1.0, 1.0);
-                vec3 d = vec3(0.263, 0.416, 0.557);
+                vec3 c = vec3(2.0, 1.0, 0.0);
+                vec3 d = vec3(0.5, 0.2, 0.25);
                 
-                return a + b * cos(6.28318 * (c * t + d));
+                vec3 color = a + b * cos(6.28318 * (c * t + d));
+                
+                // Add smooth color flow variations
+                color.r += sin(t * 3.0) * 0.1;
+                color.g += cos(t * 2.0) * 0.1;
+                color.b += sin(t * 4.0) * 0.1;
+                
+                return clamp(color, 0.0, 1.0);
             }
             
             void main() {
@@ -161,50 +169,69 @@ class ShaderApp {
                     uv += normalize(uv - mouseUV) * spiral * exp(-mouseDistance * 2.0);
                 }
                 
-                for (float i = 0.0; i < 4.0; i++) {
-                    uv = fract(uv * u_scaleFactor) - 0.5;
+                // Create seamless, continuous patterns without grid artifacts
+                vec2 originalUV = uv;
+                
+                for (float i = 0.0; i < 6.0; i++) {
+                    // Use smooth transformations instead of fractal repetition
+                    uv = originalUV;
+                    
+                    // Apply scale factor as smooth zoom rather than grid repetition
+                    uv *= u_scaleFactor * (0.5 + i * 0.3);
                     
                     // Enhanced mouse-influenced rotation with energy feedback
                     float mouseRotation = hoverIntensity * mouseDistance * (2.0 + u_energyLevel * 3.0);
                     float energyRotation = u_energyLevel * sin(time * 8.0) * 0.5;
-                    uv = rotate(uv, time * u_rotationSpeed + i * 0.5 + mouseRotation + energyRotation);
+                    float layerRotation = time * u_rotationSpeed + i * 0.8 + mouseRotation + energyRotation;
+                    uv = rotate(uv, layerRotation);
                     
-                    float d = length(uv) * exp(-length(uv0));
+                    // Create flowing, organic shapes
+                    float d = length(uv);
+                    
+                    // Add flowing wave patterns
+                    float wave1 = sin(uv.x * 3.0 + time * 2.0) * cos(uv.y * 2.0 + time * 1.5);
+                    float wave2 = sin(uv.x * 5.0 - time * 3.0) * sin(uv.y * 4.0 + time * 2.5);
+                    d += wave1 * 0.3 + wave2 * 0.2;
+                    
+                    // Create smooth distance field patterns
+                    d = abs(sin(d * (6.0 + u_complexity + hoverIntensity * 3.0 + u_energyLevel * 4.0) + time + energyPulse));
+                    
+                    // Smooth field distortion instead of harsh repetition
+                    float fieldDistortion = u_distortion + hoverIntensity * 2.5 + 
+                                           abs(totalRipple) * 3.0 + u_energyLevel * 2.0;
+                    
+                    // Add flowing turbulence
+                    vec2 turbulence = vec2(
+                        sin(uv.x * 2.0 + time) + cos(uv.y * 3.0 + time * 1.5),
+                        cos(uv.x * 3.0 + time * 1.2) + sin(uv.y * 2.5 + time * 0.8)
+                    ) * fieldDistortion * 0.1;
+                    
+                    uv += turbulence;
+                    
+                    // Create smooth intensity falloff
+                    float intensity = exp(-d * (2.0 - u_energyLevel * 0.5)) * (1.0 / (i + 1.0));
                     
                     // Dynamic color shifting with combo effects
                     float colorShift = hoverIntensity * 0.8 + abs(totalRipple) * 0.5 + 
                                       u_energyLevel * sin(time * 15.0) * 0.3 + 
-                                      u_colorBoost * 2.0;
-                    vec3 col = palette(length(uv0) + i * 0.4 + time * 0.4 + colorShift);
+                                      u_colorBoost * 2.0 + i * 0.2;
+                    
+                    vec3 col = palette(length(originalUV) * 2.0 + time * 0.4 + colorShift);
                     
                     // Add high-energy color explosions
                     if (u_energyLevel > 0.5) {
-                        vec3 explosionColor = palette(time * 2.0 + mouseDistance * 5.0);
+                        vec3 explosionColor = palette(time * 2.0 + mouseDistance * 5.0 + i * 0.3);
                         col = mix(col, explosionColor, u_energyLevel * 0.4);
                     }
-                    
-                    d = sin(d * (8.0 + u_pulseIntensity * 4.0) + time) / 8.0;
-                    d = abs(d);
-                    d = pow(0.01 / d, 1.2 + u_energyLevel * 0.3);
-                    
-                    // Enhanced complexity with energy boost
-                    float mouseComplexity = u_complexity + hoverIntensity * 3.0 + u_energyLevel * 4.0;
-                    d *= sin(uv.x * mouseComplexity + time + energyPulse) * 
-                         sin(uv.y * mouseComplexity + time + energyPulse);
-                    d = abs(d);
-                    
-                    // Intensified distortion effects
-                    float mouseDistortion = u_distortion + hoverIntensity * 2.5 + 
-                                           abs(totalRipple) * 3.0 + u_energyLevel * 2.0;
-                    d += sin(length(uv) * 10.0 * mouseDistortion + time * 2.0 + energyPulse) * 
-                         (0.1 + u_pulseIntensity * 0.2);
                     
                     // Multi-layered brightness with combo effects
                     float brightness = u_colorIntensity * 
                                       (1.0 + abs(totalRipple) * 1.5 + 
                                        u_energyLevel * 0.8 + 
-                                       u_pulseIntensity * 0.6);
-                    finalColor += col * d * brightness;
+                                       u_pulseIntensity * 0.6) * 
+                                      (1.0 - i * 0.1); // Fade each layer
+                    
+                    finalColor += col * intensity * brightness;
                 }
                 
                 // Enhanced glow effects
