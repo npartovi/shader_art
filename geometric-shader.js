@@ -1,12 +1,20 @@
 class GeometricShaderApp {
     constructor() {
+        console.log('GeometricShaderApp starting...');
         this.canvas = document.getElementById('canvas');
+        if (!this.canvas) {
+            console.error('Canvas element not found');
+            return;
+        }
+        
         this.gl = this.canvas.getContext('webgl');
         
         if (!this.gl) {
             alert('WebGL not supported');
             return;
         }
+        
+        console.log('WebGL context created successfully');
         
         this.startTime = Date.now();
         this.uniforms = {
@@ -29,13 +37,24 @@ class GeometricShaderApp {
         this.isMouseDown = false;
         this.currentPattern = 0;
         
-        this.initShaders();
-        this.initBuffers();
-        this.setupControls();
-        this.setupMouseEvents();
-        this.setupResize();
-        this.resizeCanvas();
-        this.render();
+        try {
+            this.initShaders();
+            console.log('Shaders initialized');
+            this.initBuffers();
+            console.log('Buffers initialized');
+            this.setupControls();
+            console.log('Controls setup');
+            this.setupMouseEvents();
+            console.log('Mouse events setup');
+            this.setupResize();
+            console.log('Resize setup');
+            this.resizeCanvas();
+            console.log('Canvas resized');
+            this.render();
+            console.log('Render started');
+        } catch (error) {
+            console.error('Error in constructor:', error);
+        }
     }
     
     initShaders() {
@@ -210,15 +229,6 @@ class GeometricShaderApp {
                 
                 float time = u_time * u_animationSpeed;
                 
-                // Apply glitch effects to UV coordinates
-                if (u_pixelCorruption > 0.0) {
-                    uv = pixelCorruption(uv, u_pixelCorruption);
-                }
-                
-                if (u_dataShift > 0.0) {
-                    uv = dataShift(uv, u_dataShift);
-                }
-                
                 // Mouse influence
                 vec2 mouseUV = u_mouse * 2.0 - 1.0;
                 mouseUV.y *= -1.0;
@@ -235,55 +245,27 @@ class GeometricShaderApp {
                 // Rotation
                 uv = rotate(uv, time * u_rotationSpeed);
                 
-                // Check for glitch corruption first
-                float glitchResult = glitchPattern(originalUV, u_glitchIntensity);
-                float finalPattern;
+                // Get primary pattern
+                float pattern1 = getPattern(uv, u_patternType);
                 
-                if (glitchResult >= 0.0) {
-                    // Use glitch result
-                    finalPattern = glitchResult;
-                } else {
-                    // Get primary pattern
-                    float pattern1 = getPattern(uv, u_patternType);
-                    
-                    // Get secondary pattern for blending
-                    float pattern2 = getPattern(uv * 1.3, mod(u_patternType + 1.0, 8.0));
-                    
-                    // Blend patterns
-                    finalPattern = mix(pattern1, pattern2, u_geometricBlend);
-                    
-                    // Add time-based animation
-                    float animation = sin(time * 2.0 + originalUV.x * 5.0 + originalUV.y * 3.0) * 0.5 + 0.5;
-                    finalPattern = mix(finalPattern, 1.0 - finalPattern, animation * 0.1);
-                }
+                // Get secondary pattern for blending
+                float pattern2 = getPattern(uv * 1.3, mod(u_patternType + 1.0, 8.0));
                 
-                // Mouse interaction effect (more intense with glitch)
+                // Blend patterns
+                float finalPattern = mix(pattern1, pattern2, u_geometricBlend);
+                
+                // Add time-based animation
+                float animation = sin(time * 2.0 + originalUV.x * 5.0 + originalUV.y * 3.0) * 0.5 + 0.5;
+                finalPattern = mix(finalPattern, 1.0 - finalPattern, animation * 0.1);
+                
+                // Mouse interaction effect
                 float mouseEffect = exp(-mouseDistance * 5.0) * (sin(time * 10.0) * 0.5 + 0.5);
                 if (mouseDistance < 0.3) {
-                    finalPattern = mix(finalPattern, 1.0 - finalPattern, mouseEffect * (0.5 + u_glitchIntensity));
+                    finalPattern = mix(finalPattern, 1.0 - finalPattern, mouseEffect * 0.5);
                 }
                 
-                // Add scanline corruption
-                if (u_dataShift > 0.0) {
-                    float scanline = floor(gl_FragCoord.y / 2.0);
-                    float scanNoise = random(vec2(scanline, floor(u_time * 30.0)));
-                    if (scanNoise > 1.0 - u_dataShift * 0.1) {
-                        finalPattern = random(originalUV * 100.0 + u_time);
-                    }
-                }
-                
-                // Sharp black and white output with potential corruption
-                float output = step(0.5, finalPattern);
-                
-                // Add random pixel corruption
-                if (u_pixelCorruption > 0.0) {
-                    float pixelNoise = random(gl_FragCoord.xy + u_time * 0.1);
-                    if (pixelNoise > 1.0 - u_pixelCorruption * 0.05) {
-                        output = 1.0 - output;
-                    }
-                }
-                
-                vec3 color = vec3(output);
+                // Sharp black and white output
+                vec3 color = vec3(step(0.5, finalPattern));
                 
                 gl_FragColor = vec4(color, 1.0);
             }
@@ -371,11 +353,15 @@ class GeometricShaderApp {
             const slider = document.getElementById(control);
             const display = document.getElementById(control + 'Value');
             
-            slider.addEventListener('input', (e) => {
-                const value = parseFloat(e.target.value);
-                this.uniforms['u_' + control] = value;
-                display.textContent = value.toFixed(1);
-            });
+            if (slider && display) {
+                slider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    this.uniforms['u_' + control] = value;
+                    display.textContent = value.toFixed(1);
+                });
+            } else {
+                console.warn(`Control not found: ${control}`);
+            }
         });
     }
     
