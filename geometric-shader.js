@@ -17,25 +17,14 @@ class GeometricShaderApp {
         console.log('WebGL context created successfully');
         
         this.startTime = Date.now();
-        this.uniforms = {
-            u_time: 0,
-            u_resolution: [800, 600],
-            u_patternScale: 1.0,
-            u_rotationSpeed: 0.3,
-            u_patternDensity: 8.0,
-            u_transformIntensity: 1.0,
-            u_animationSpeed: 1.0,
-            u_geometricBlend: 0.5,
-            u_mouse: [0.5, 0.5],
-            u_patternType: 0.0,
-            u_glitchIntensity: 0.0,
-            u_pixelCorruption: 0.0,
-            u_dataShift: 0.0
-        };
-        
         this.mousePos = { x: 0.5, y: 0.5 };
         this.isMouseDown = false;
         this.currentPattern = 0;
+        
+        // Initialize uniforms after we know shaders work
+        this.uniforms = null;
+        this.program = null;
+        this.uniformLocations = null;
         
         try {
             this.initShaders();
@@ -287,6 +276,23 @@ class GeometricShaderApp {
         
         this.gl.useProgram(this.program);
         
+        // Now initialize uniforms
+        this.uniforms = {
+            u_time: 0,
+            u_resolution: [800, 600],
+            u_patternScale: 1.0,
+            u_rotationSpeed: 0.3,
+            u_patternDensity: 8.0,
+            u_transformIntensity: 1.0,
+            u_animationSpeed: 1.0,
+            u_geometricBlend: 0.5,
+            u_mouse: [0.5, 0.5],
+            u_patternType: 0.0,
+            u_glitchIntensity: 0.0,
+            u_pixelCorruption: 0.0,
+            u_dataShift: 0.0
+        };
+        
         this.uniformLocations = {};
         Object.keys(this.uniforms).forEach(key => {
             this.uniformLocations[key] = this.gl.getUniformLocation(this.program, key);
@@ -476,6 +482,12 @@ class GeometricShaderApp {
     }
     
     render() {
+        if (!this.uniforms || !this.program || !this.gl) {
+            console.warn('Not ready to render yet');
+            requestAnimationFrame(() => this.render());
+            return;
+        }
+        
         this.uniforms.u_time = (Date.now() - this.startTime) / 1000.0;
         
         this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
