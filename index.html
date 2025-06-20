@@ -185,6 +185,22 @@
             </div>
             
             <div class="control-group">
+                <h3>Glitch Effects</h3>
+                
+                <label>Glitch Intensity</label>
+                <input type="range" id="glitchIntensity" min="0" max="1" step="0.05" value="0">
+                <div class="value-display" id="glitchIntensityValue">0.0</div>
+                
+                <label>Pixel Corruption</label>
+                <input type="range" id="pixelCorruption" min="0" max="1" step="0.05" value="0">
+                <div class="value-display" id="pixelCorruptionValue">0.0</div>
+                
+                <label>Data Shift</label>
+                <input type="range" id="dataShift" min="0" max="1" step="0.05" value="0">
+                <div class="value-display" id="dataShiftValue">0.0</div>
+            </div>
+            
+            <div class="control-group">
                 <h3>Pattern Types</h3>
                 <div class="pattern-buttons">
                     <button onclick="loadPattern('checkerboard')">Checkerboard</button>
@@ -195,6 +211,14 @@
                     <button onclick="loadPattern('hexagons')">Hexagons</button>
                     <button onclick="loadPattern('maze')">Maze</button>
                     <button onclick="loadPattern('waves')">Waves</button>
+                </div>
+                
+                <h3>Glitch Presets</h3>
+                <div class="pattern-buttons">
+                    <button onclick="loadGlitchPreset('corruption')">Data Corruption</button>
+                    <button onclick="loadGlitchPreset('pixel_death')">Pixel Death</button>
+                    <button onclick="loadGlitchPreset('scanlines')">Scanline Error</button>
+                    <button onclick="loadGlitchPreset('full_glitch')">Full Glitch</button>
                 </div>
             </div>
             
