@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shader Art Visualizer</title>
+    <title>Geometric Pattern Visualizer</title>
     <style>
         body {
             margin: 0;
@@ -90,7 +90,7 @@
             background: #5a5a5a;
         }
         
-        .preset-buttons {
+        .pattern-buttons {
             display: flex;
             flex-wrap: wrap;
             gap: 5px;
@@ -130,7 +130,7 @@
                 overflow-y: auto;
             }
             
-            .preset-buttons {
+            .pattern-buttons {
                 justify-content: center;
             }
         }
@@ -141,64 +141,60 @@
         <div class="canvas-container">
             <canvas id="canvas"></canvas>
             <div id="interaction-hint" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: #666; font-size: 12px; text-align: center;">
-                Click rapidly for combos • Hold down for sustained effects • Move mouse to warp reality
+                Click and drag to transform geometric patterns
             </div>
         </div>
         
         <div class="controls">
-            <h3>Shader Controls</h3>
+            <h3>Geometric Controls</h3>
             
             <div class="control-group">
-                <label>Time Speed</label>
-                <input type="range" id="timeSpeed" min="0" max="3" step="0.1" value="1">
-                <div class="value-display" id="timeSpeedValue">1.0</div>
-            </div>
-            
-            <div class="control-group">
-                <label>Distortion Amount</label>
-                <input type="range" id="distortion" min="0" max="5" step="0.1" value="1">
-                <div class="value-display" id="distortionValue">1.0</div>
-            </div>
-            
-            <div class="control-group">
-                <label>Shape Complexity</label>
-                <input type="range" id="complexity" min="1" max="10" step="1" value="3">
-                <div class="value-display" id="complexityValue">3</div>
-            </div>
-            
-            <div class="control-group">
-                <label>Color Intensity</label>
-                <input type="range" id="colorIntensity" min="0.1" max="3" step="0.1" value="1">
-                <div class="value-display" id="colorIntensityValue">1.0</div>
+                <label>Pattern Scale</label>
+                <input type="range" id="patternScale" min="0.1" max="5" step="0.1" value="1">
+                <div class="value-display" id="patternScaleValue">1.0</div>
             </div>
             
             <div class="control-group">
                 <label>Rotation Speed</label>
-                <input type="range" id="rotationSpeed" min="-2" max="2" step="0.1" value="0.5">
-                <div class="value-display" id="rotationSpeedValue">0.5</div>
+                <input type="range" id="rotationSpeed" min="-2" max="2" step="0.1" value="0.3">
+                <div class="value-display" id="rotationSpeedValue">0.3</div>
             </div>
             
             <div class="control-group">
-                <label>Scale Factor</label>
-                <input type="range" id="scaleFactor" min="0.1" max="3" step="0.1" value="1">
-                <div class="value-display" id="scaleFactorValue">1.0</div>
+                <label>Pattern Density</label>
+                <input type="range" id="patternDensity" min="1" max="20" step="1" value="8">
+                <div class="value-display" id="patternDensityValue">8</div>
             </div>
             
             <div class="control-group">
-                <h3>Presets</h3>
-                <div class="preset-buttons">
-                    <button onclick="loadPreset('kaleidoscope')">Kaleidoscope</button>
-                    <button onclick="loadPreset('plasma')">Plasma</button>
-                    <button onclick="loadPreset('fractal')">Fractal</button>
-                    <button onclick="loadPreset('waves')">Waves</button>
-                    <button onclick="loadPreset('hypnotic')">Hypnotic</button>
-                    <button onclick="loadPreset('electric')">Electric</button>
-                    <button onclick="loadPreset('dreamscape')">Dreamscape</button>
-                    <button onclick="loadPreset('cosmic')">Cosmic</button>
-                    <button onclick="loadPreset('meditation')">Meditation</button>
-                    <button onclick="loadPreset('cyberpunk')">Cyberpunk</button>
-                    <button onclick="loadPreset('aurora')">Aurora</button>
-                    <button onclick="loadPreset('tornado')">Tornado</button>
+                <label>Transformation Intensity</label>
+                <input type="range" id="transformIntensity" min="0" max="3" step="0.1" value="1">
+                <div class="value-display" id="transformIntensityValue">1.0</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Animation Speed</label>
+                <input type="range" id="animationSpeed" min="0" max="3" step="0.1" value="1">
+                <div class="value-display" id="animationSpeedValue">1.0</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Geometric Blend</label>
+                <input type="range" id="geometricBlend" min="0" max="1" step="0.1" value="0.5">
+                <div class="value-display" id="geometricBlendValue">0.5</div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Pattern Types</h3>
+                <div class="pattern-buttons">
+                    <button onclick="loadPattern('checkerboard')">Checkerboard</button>
+                    <button onclick="loadPattern('stripes')">Stripes</button>
+                    <button onclick="loadPattern('mountains')">Mountains</button>
+                    <button onclick="loadPattern('triangles')">Triangles</button>
+                    <button onclick="loadPattern('diamonds')">Diamonds</button>
+                    <button onclick="loadPattern('hexagons')">Hexagons</button>
+                    <button onclick="loadPattern('maze')">Maze</button>
+                    <button onclick="loadPattern('waves')">Waves</button>
                 </div>
             </div>
             
@@ -209,6 +205,6 @@
         </div>
     </div>
     
-    <script src="shader-app.js"></script>
+    <script src="geometric-shader.js"></script>
 </body>
 </html>
