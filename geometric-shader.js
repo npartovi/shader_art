@@ -19,7 +19,10 @@ class GeometricShaderApp {
             u_animationSpeed: 1.0,
             u_geometricBlend: 0.5,
             u_mouse: [0.5, 0.5],
-            u_patternType: 0.0
+            u_patternType: 0.0,
+            u_glitchIntensity: 0.0,
+            u_pixelCorruption: 0.0,
+            u_dataShift: 0.0
         };
         
         this.mousePos = { x: 0.5, y: 0.5 };
@@ -56,6 +59,9 @@ class GeometricShaderApp {
             uniform float u_geometricBlend;
             uniform vec2 u_mouse;
             uniform float u_patternType;
+            uniform float u_glitchIntensity;
+            uniform float u_pixelCorruption;
+            uniform float u_dataShift;
             
             vec2 rotate(vec2 v, float a) {
                 float s = sin(a);
@@ -126,6 +132,58 @@ class GeometricShaderApp {
                 return step(0.0, wave + uv.y * 4.0 - 2.0);
             }
             
+            float random(vec2 st) {
+                return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+            }
+            
+            vec2 pixelCorruption(vec2 uv, float intensity) {
+                // Create pixel-level corruption
+                vec2 pixelUV = floor(uv * 100.0) / 100.0;
+                float noise = random(pixelUV + u_time * 0.1);
+                
+                if (noise > 1.0 - intensity) {
+                    // Corrupt this pixel block
+                    return pixelUV + vec2(random(pixelUV * 2.0), random(pixelUV * 3.0)) * 0.1;
+                }
+                return uv;
+            }
+            
+            vec2 dataShift(vec2 uv, float intensity) {
+                // Simulate data corruption with horizontal shifts
+                float y = floor(uv.y * 200.0);
+                float corruption = random(vec2(y, floor(u_time * 10.0)));
+                
+                if (corruption > 1.0 - intensity * 0.3) {
+                    float shift = (random(vec2(y * 2.0, u_time)) - 0.5) * intensity * 0.5;
+                    uv.x += shift;
+                }
+                return uv;
+            }
+            
+            float glitchPattern(vec2 uv, float intensity) {
+                // Create glitch-like fragmentation
+                vec2 blockUV = floor(uv * 50.0) / 50.0;
+                float blockNoise = random(blockUV + floor(u_time * 5.0) * 0.1);
+                
+                if (blockNoise > 1.0 - intensity) {
+                    // This block is corrupted
+                    float corruptionType = random(blockUV * 2.0);
+                    
+                    if (corruptionType < 0.33) {
+                        // Inverted block
+                        return 1.0;
+                    } else if (corruptionType < 0.66) {
+                        // Shifted pattern
+                        vec2 shiftedUV = uv + vec2(0.1, 0.0) * sin(u_time * 20.0);
+                        return getPattern(shiftedUV, u_patternType);
+                    } else {
+                        // Random noise block
+                        return random(uv * 100.0 + u_time);
+                    }
+                }
+                return -1.0; // No corruption
+            }
+            
             float getPattern(vec2 uv, float patternType) {
                 if (patternType < 0.5) {
                     return checkerboard(uv);
@@ -152,10 +210,19 @@ class GeometricShaderApp {
                 
                 float time = u_time * u_animationSpeed;
                 
+                // Apply glitch effects to UV coordinates
+                if (u_pixelCorruption > 0.0) {
+                    uv = pixelCorruption(uv, u_pixelCorruption);
+                }
+                
+                if (u_dataShift > 0.0) {
+                    uv = dataShift(uv, u_dataShift);
+                }
+                
                 // Mouse influence
                 vec2 mouseUV = u_mouse * 2.0 - 1.0;
                 mouseUV.y *= -1.0;
-                float mouseDistance = length(uv - mouseUV);
+                float mouseDistance = length(originalUV - mouseUV);
                 
                 // Apply transformations
                 uv *= u_patternScale;
@@ -168,27 +235,55 @@ class GeometricShaderApp {
                 // Rotation
                 uv = rotate(uv, time * u_rotationSpeed);
                 
-                // Get primary pattern
-                float pattern1 = getPattern(uv, u_patternType);
+                // Check for glitch corruption first
+                float glitchResult = glitchPattern(originalUV, u_glitchIntensity);
+                float finalPattern;
                 
-                // Get secondary pattern for blending
-                float pattern2 = getPattern(uv * 1.3, mod(u_patternType + 1.0, 8.0));
-                
-                // Blend patterns
-                float finalPattern = mix(pattern1, pattern2, u_geometricBlend);
-                
-                // Add time-based animation
-                float animation = sin(time * 2.0 + originalUV.x * 5.0 + originalUV.y * 3.0) * 0.5 + 0.5;
-                finalPattern = mix(finalPattern, 1.0 - finalPattern, animation * 0.1);
-                
-                // Mouse interaction effect
-                float mouseEffect = exp(-mouseDistance * 5.0) * (sin(time * 10.0) * 0.5 + 0.5);
-                if (mouseDistance < 0.3) {
-                    finalPattern = mix(finalPattern, 1.0 - finalPattern, mouseEffect * 0.5);
+                if (glitchResult >= 0.0) {
+                    // Use glitch result
+                    finalPattern = glitchResult;
+                } else {
+                    // Get primary pattern
+                    float pattern1 = getPattern(uv, u_patternType);
+                    
+                    // Get secondary pattern for blending
+                    float pattern2 = getPattern(uv * 1.3, mod(u_patternType + 1.0, 8.0));
+                    
+                    // Blend patterns
+                    finalPattern = mix(pattern1, pattern2, u_geometricBlend);
+                    
+                    // Add time-based animation
+                    float animation = sin(time * 2.0 + originalUV.x * 5.0 + originalUV.y * 3.0) * 0.5 + 0.5;
+                    finalPattern = mix(finalPattern, 1.0 - finalPattern, animation * 0.1);
                 }
                 
-                // Sharp black and white output
-                vec3 color = vec3(step(0.5, finalPattern));
+                // Mouse interaction effect (more intense with glitch)
+                float mouseEffect = exp(-mouseDistance * 5.0) * (sin(time * 10.0) * 0.5 + 0.5);
+                if (mouseDistance < 0.3) {
+                    finalPattern = mix(finalPattern, 1.0 - finalPattern, mouseEffect * (0.5 + u_glitchIntensity));
+                }
+                
+                // Add scanline corruption
+                if (u_dataShift > 0.0) {
+                    float scanline = floor(gl_FragCoord.y / 2.0);
+                    float scanNoise = random(vec2(scanline, floor(u_time * 30.0)));
+                    if (scanNoise > 1.0 - u_dataShift * 0.1) {
+                        finalPattern = random(originalUV * 100.0 + u_time);
+                    }
+                }
+                
+                // Sharp black and white output with potential corruption
+                float output = step(0.5, finalPattern);
+                
+                // Add random pixel corruption
+                if (u_pixelCorruption > 0.0) {
+                    float pixelNoise = random(gl_FragCoord.xy + u_time * 0.1);
+                    if (pixelNoise > 1.0 - u_pixelCorruption * 0.05) {
+                        output = 1.0 - output;
+                    }
+                }
+                
+                vec3 color = vec3(output);
                 
                 gl_FragColor = vec4(color, 1.0);
             }
@@ -268,7 +363,8 @@ class GeometricShaderApp {
     setupControls() {
         const controls = [
             'patternScale', 'rotationSpeed', 'patternDensity', 
-            'transformIntensity', 'animationSpeed', 'geometricBlend'
+            'transformIntensity', 'animationSpeed', 'geometricBlend',
+            'glitchIntensity', 'pixelCorruption', 'dataShift'
         ];
         
         controls.forEach(control => {
@@ -443,6 +539,45 @@ function loadPattern(pattern) {
     }
 }
 
+function loadGlitchPreset(preset) {
+    const presets = {
+        corruption: {
+            glitchIntensity: 0.3,
+            pixelCorruption: 0.2,
+            dataShift: 0.4
+        },
+        pixel_death: {
+            glitchIntensity: 0.1,
+            pixelCorruption: 0.8,
+            dataShift: 0.1
+        },
+        scanlines: {
+            glitchIntensity: 0.0,
+            pixelCorruption: 0.0,
+            dataShift: 0.7
+        },
+        full_glitch: {
+            glitchIntensity: 0.6,
+            pixelCorruption: 0.5,
+            dataShift: 0.8
+        }
+    };
+    
+    if (window.geometricApp && presets[preset]) {
+        Object.keys(presets[preset]).forEach(key => {
+            const value = presets[preset][key];
+            const slider = document.getElementById(key);
+            const display = document.getElementById(key + 'Value');
+            
+            if (slider && display) {
+                slider.value = value;
+                display.textContent = value.toFixed(2);
+                window.geometricApp.uniforms['u_' + key] = value;
+            }
+        });
+    }
+}
+
 function resetControls() {
     const defaults = {
         patternScale: 1.0,
@@ -450,7 +585,10 @@ function resetControls() {
         patternDensity: 8,
         transformIntensity: 1.0,
         animationSpeed: 1.0,
-        geometricBlend: 0.5
+        geometricBlend: 0.5,
+        glitchIntensity: 0.0,
+        pixelCorruption: 0.0,
+        dataShift: 0.0
     };
     
     Object.keys(defaults).forEach(key => {
